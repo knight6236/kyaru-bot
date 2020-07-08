@@ -28,17 +28,13 @@ async def event_gm(app: Mirai, member: Member, message: MessageChain):
         return
 
     if member.id == 623697643 and '更新插件' == msg:
-        plugin_set = load_plugins(reload=True)
-        print(len(plugin_set))
-        if plugin_set:
-            return await app.sendGroupMessage(member.group.id, [Plain(text='更新插件成功！')])
-        else:
-            return await app.sendGroupMessage(member.group.id, [Plain(text='更新插件失败！')])
+        plugins_set = load_plugins(reload=True)
+        return await app.sendGroupMessage(member.group.id, [Plain(text='本次更新' + str(len(plugins_set)) + '个插件')])
 
     await handle_group_msg(app, member, message)
 
 
 if __name__ == "__main__":
     plugin_set = load_plugins()
-    print(len(plugin_set))
+    print('初始化插件数：' + str(len(plugin_set)))
     bot.run()

@@ -1,5 +1,6 @@
 import importlib
 import os
+import sys
 import time
 import warnings
 from types import ModuleType
@@ -38,7 +39,7 @@ class PluginManager:
             plugin (Plugin): Plugin object
         """
         if module_path in cls._plugins:
-            warnings.warn(f"Plugin {module_path} already exists")
+            warnings.warn(f"add Plugin {module_path} already exists")
             return
         cls._plugins[module_path] = plugin
 
@@ -71,7 +72,7 @@ class PluginManager:
         """
         plugin = cls.get_plugin(module_path)
         if not plugin:
-            warnings.warn(f"Plugin {module_path} not exists")
+            warnings.warn(f"remove Plugin {module_path} not exists")
             return False
         del cls._plugins[module_path]
         return True
@@ -89,16 +90,15 @@ def load_plugin(module_path: str) -> Optional[Plugin]:
     try:
         st_mtime = os.stat(module_path.replace('.', '/') + '.py').st_mtime
         file_time = time.strftime("%Y-%m-%d %H-%M-%S", time.localtime(st_mtime))
-
         module: ModuleType = importlib.import_module(module_path)
         name = getattr(module, '__plugin_name__', None)
         usage = getattr(module, '__plugin_usage__', None)
         plugin = Plugin(module, name, usage, file_time)
         PluginManager.add_plugin(module_path, plugin)
-        print(f'Succeeded to import "{module_path}"')
+        print(f'load Succeeded to import "{module_path}"')
         return plugin
     except Exception as e:
-        print(f'Failed to import "{module_path}", error: {e}')
+        print(f'load Failed to import "{module_path}", error: {e}')
         return None
 
 
@@ -115,10 +115,10 @@ def reload_plugin(module_path: str) -> Optional[Plugin]:
         usage = getattr(module, '__plugin_usage__', None)
         plugin = Plugin(module, name, usage, file_time)
         PluginManager.add_plugin(module_path, plugin)
-        print(f'Succeeded to import "{module_path}"')
+        print(f'reload Succeeded to import "{module_path}"')
         return plugin
     except Exception as e:
-        print(f'Failed to import "{module_path}", error: {e}')
+        print(f'reload Failed to import "{module_path}", error: {e}')
     return None
 
 
@@ -134,6 +134,7 @@ def load_plugins(plugin_dir: str = 'plugins', reload: bool = False) -> Set[Plugi
     """
     count = set()
     plugin_names = []
+
     for root, dir_list, file_list in os.walk(plugin_dir):
         for file_name in file_list:
             path = os.path.join(root, file_name)
@@ -153,12 +154,28 @@ def load_plugins(plugin_dir: str = 'plugins', reload: bool = False) -> Set[Plugi
             plugin_names.append(plugin_name)
 
     if reload:
+        exist_plugins = PluginManager._plugins.keys()
+        reload_names = list(set(exist_plugins).intersection(set(plugin_names)))
+        load_names = list(set(plugin_names).difference(set(exist_plugins)))
+        del_names = list(set(exist_plugins).difference(set(plugin_names)))
         for i in range(2):
-            for module_path in plugin_names:
+            for module_path in reload_names:
                 result = reload_plugin(module_path)
                 if i == 1 and result:
                     count.add(result)
             time.sleep(0.5)
+        for module_path in load_names:
+            result = load_plugin(module_path)
+            if result:
+                count.add(result)
+        for module_path in del_names:
+            plugin = PluginManager.get_plugin(module_path)
+            if PluginManager.remove_plugin(module_path):
+                del plugin.module
+                del sys.modules[module_path]
+                print('删除' + module_path)
+                if module_path in sys.modules.keys():
+                    print('删除失败:' + sys.modules[module_path])
     else:
         for module_path in plugin_names:
             result = load_plugin(module_path)
