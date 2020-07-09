@@ -1,10 +1,13 @@
 import asyncio
-from pprint import pprint
+import datetime
+import random
+import re
 
 from mirai import Permission, Member, Mirai
 
-from plugins.common.commons import *
-from plugins.common.constants import *
+from plugins.common.commons import read_json, write_json, check_dmg, reply_group, sort_dmg, current_date_str, print_msg, \
+    isVaildDate
+from plugins.common.constants import ILLEGAL_ERR
 from plugins.guild.manage import is_guild_member, read_guild, write_guild
 
 boss_data = [[]]
@@ -925,6 +928,7 @@ async def all_dmg_records(app: Mirai, member: Member, args: str):
             if len(records) == 0:
                 msg += ' 已出 0/3 刀，合计伤害 0\n'
             for date_str in records:
+                msg += ' ' + date_str + '\n'
                 record_arr = records[date_str]
                 normal_list = []
                 tail_list = []

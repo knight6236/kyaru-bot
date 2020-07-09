@@ -1,9 +1,9 @@
 import yaml
-from mirai import Mirai, MessageChain, Member, Plain
+from mirai import Mirai, Member, MessageChain, Plain
 
 import gl
 from plugin import load_plugins
-from plugins.group_msg import handle_group_msg
+import plugins
 
 f = open('config/bot.yaml', encoding="utf-8")
 cfg = yaml.load(f, Loader=yaml.FullLoader)
@@ -31,7 +31,7 @@ async def event_gm(app: Mirai, member: Member, message: MessageChain):
         plugins_set = load_plugins(reload=True)
         return await app.sendGroupMessage(member.group.id, [Plain(text='本次更新' + str(len(plugins_set)) + '个插件')])
 
-    await handle_group_msg(app, member, message)
+    await plugins.group_msg.handle_group_msg(app, member, message)
 
 
 if __name__ == "__main__":

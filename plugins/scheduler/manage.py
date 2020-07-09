@@ -1,7 +1,10 @@
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import datetime
 
-from plugins.common.commons import *
-from plugins.scheduler.jobs import *
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from mirai import Mirai, Member, At, Plain
+
+from plugins.common.commons import print_msg, deal_job, uniqueNumStr, check_job
+from plugins.scheduler.jobs import aps_job
 
 scheduler = AsyncIOScheduler()
 
@@ -20,8 +23,10 @@ def run_scheduler():
         print_msg(tag='Error', msg='定时任务调度器启动失败')
 
 
+run_scheduler()
+
+
 async def add_job(app: Mirai, member: Member, arg: str):
-    # content = eval(textList[1])
     content = deal_job(arg)
     print('content:', content)
     if content is None:
@@ -32,13 +37,11 @@ async def add_job(app: Mirai, member: Member, arg: str):
         return await app.sendGroupMessage(member.group, [At(target=member.id), Plain(text='不能添加比现在还早的任务')])
     job_id = uniqueNumStr()
     job_name = str(member.group.id) + '#' + str(member.id) + '#' + content['task']
-    # msg = '当前任务ID：' + job_id + '\n 姬塔将会在' + content['time'] + '提醒你：' + content['task']
     msg = '当前任务ID：' + job_id + '\n 凯露将会在' + content['time'] + '提醒你：' + content['task']
     if '艾特所有人' in content['task']:
         tmp = content['task'][5:]
         scheduler.add_job(id=job_id, name=job_name, func=aps_job, args=[app, tmp, member, True],
                           trigger='date', run_date=content['time'])
-        # msg = '当前任务ID：' + job_id + '\n 姬塔将会在' + content['time'] + '艾特所有人：' + tmp
         msg = '当前任务ID：' + job_id + '\n 凯露将会在' + content['time'] + '艾特所有人：' + tmp
     else:
         scheduler.add_job(id=job_id, name=job_name, func=aps_job, args=[app, content['task'], member],
@@ -52,27 +55,21 @@ async def remove_job(app: Mirai, member: Member, arg: str):
         return await app.sendGroupMessage(member.group, [At(target=member.id), Plain(text='格式不合法')])
     job_id = arg
     scheduler.remove_job(job_id)
-    # return await app.sendGroupMessage(member.group,
-    #                                   [At(target=member.id), Plain(text='任务' + job_id + '已被姬塔移除 ~ ')])
     return await app.sendGroupMessage(member.group,
                                       [At(target=member.id), Plain(text='任务' + job_id + '已被凯露移除 ~ ')])
 
 
 async def query_job(app: Mirai, member: Member, arg: str):
     jobs = scheduler.get_jobs()
-    # print(jobs)
     plains = []
     for job in jobs:
         jobStr = str(job.name).split('#')
-        # print(jobStr)
         if jobStr[0] == str(member.group.id) and jobStr[1] == str(member.id):
             msg = '任务ID：' + job.id + '\t 时间：' + job.next_run_time.strftime('%Y-%m-%d %H:%M:%S') + '\t 内容：' + jobStr[
                 2] + '\n'
             plains.append(Plain(text=msg))
     if len(plains) > 0:
-        # m = [At(target=member.id), Plain(text='姬塔为你查询到的所有任务如下：\n')] + plains
         m = [At(target=member.id), Plain(text='凯露为你查询到的所有任务如下：\n')] + plains
         await app.sendGroupMessage(member.group, m)
     else:
-        # return await app.sendGroupMessage(member.group, [At(target=member.id), Plain(text='姬塔未查询到你的任务')])
         return await app.sendGroupMessage(member.group, [At(target=member.id), Plain(text='凯露未查询到你的任务')])
